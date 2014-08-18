@@ -1,0 +1,115 @@
+<html itemscope itemtype="http://schema.org/Product">
+  <head>
+    <title itemprop="name">Demo: Google+ URL to ID</title>
+    <meta itemprop="image" content="http://wheresgus.com/plusone.png">
+  </head>
+  <script type="text/javascript">
+  var key = 'AIzaSyCxR5pecFX-A0xwjg4Wq_l9z21MnHo4NuU';
+  var maxQueryCount = 100; // max # of queries to G+ per search
+  var isFound = false;
+  var searchUrl = '';
+  var targetActivity = undefined;
+
+
+  /**
+   * Handles loading the API clients from endpoints.
+   */
+  function handleClientLoad(){
+    console.log('Loading plus api...');
+    gapi.client.setApiKey(key);
+    gapi.client.load('plus', 'v1', function(){console.log('...done loading plus.')});
+  }
+
+  /**
+   * Resets the app.
+   */
+  function initialize(){
+    isFound = false;
+    searchUrl =''
+    targetActivity = undefined;
+  }
+
+
+  /**
+   * Starts the search for the post ID.
+   */
+  function search(){
+    var url = document.getElementById('url').value;
+    var urlParts = url.split('/');
+    var userId = urlParts[3];
+    var userIdUrl = '';
+    gapi.client.plus.people.get({userId: userId}).execute(function(user){
+      for (var i=0; i< urlParts.length; i++){
+        if (i == 3){
+          userIdUrl += '/' + user.id;
+        }else{
+          userIdUrl += ((i != 0) ? '/' : '') + urlParts[i];
+        }
+      }
+      searchForUrl(userIdUrl, 0, '');
+    });
+  }
+
+
+  /**
+   * Performs the API queries for searching,
+   *
+   * @param {String} searchUrl The Url containing the user ID for searching.
+   * @param {int} queryCount The number of API calls made.
+   * @param {String} nextPageToken The next page token for paged api calls.
+   */
+  function searchForUrl(searchUrl, queryCount, nextPageToken){
+    var userId = searchUrl.split('/')[3];
+
+    gapi.client.plus.activities.list({userId: userId,
+        pageToken: nextPageToken}).execute( function(resp){
+          handleActivities(resp.items, searchUrl, queryCount, resp.nextPageToken);
+        });
+  }
+
+
+  /**
+   * Parses and stores activities from the XMLHttpRequest
+   *
+   * @param {Object} activities The response activity objects as an array.
+   * @param {String} postUrl The URL of the post.
+   * @param {int} queryCount The number of API calls.
+   * @param {string} nextPageToken The next page token.
+   */
+  function handleActivities(activities, postUrl, queryCount, nextPageToken){
+    for (var activity in activities){
+      activity = activities[activity];
+      if (activity['url'] == postUrl){
+        targetActivity = activity;
+        document.getElementById('result').value = 'ID is: ' +
+            activity.id + '\n' +
+            'PlusCount is: ' + activity.object.plusoners.totalItems + '\n' +
+            'Replies are: ' + activity.object.replies.totalItems + '\n' +
+            'Reshares are: ' + activity.object.resharers.totalItems + '\n';
+        isFound = true;
+      }else{
+        console.log(activity);
+      }
+    }
+
+    if (queryCount < maxQueryCount && !isFound){
+      queryCount++;
+
+      // throttle calls using timer to avoid reaching query limit
+      console.log('retrying with ' + nextPageToken);
+      setTimeout(searchForUrl(postUrl, queryCount, nextPageToken), 100);
+    }
+  }
+
+  </script>
+  <script src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
+  <body>
+    <h3>Demo: Converting a URL to Google+ Activity ID</h3>
+    <p itemprop="description">This page shows you how to get an activity ID from a Google+ URL</p>
+    <p>Copy and paste a URL from Google+ and click search.</p>
+    <input type="text" id="url" size="64"></input>
+    <button onClick='search()'>Search</button>
+    <br/>
+    <textarea style="width:300px; height:130px;" id="result"></textarea>
+  </body>
+</html>
