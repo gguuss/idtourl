@@ -22,6 +22,7 @@
   </head>
   <script type="text/javascript">
 
+  // Live demo at http://wheresgus.com/urltoid
   // Learn more about this sample code at:
   //   https://gusclass.com/blog/?p=1656
 
@@ -83,7 +84,7 @@
     var userId = searchUrl.split('/')[3];
 
     gapi.client.plus.activities.list({userId: userId,
-        pageToken: nextPageToken}).execute( function(resp){
+          collection: 'public', pageToken: nextPageToken}).execute( function(resp){
           handleActivities(resp.items, searchUrl, queryCount, resp.nextPageToken);
         });
   }
